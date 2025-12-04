@@ -71,9 +71,20 @@ const initializeSocket = (io) => {
     socket.emit('onlineUsers', onlineUsersList);
 
     // Join chat rooms
-    socket.on('joinChat', (chatId) => {
+    socket.on('joinChat', async (chatId) => {
       socket.join(`chat:${chatId}`);
       console.log(`${socket.username} joined chat: ${chatId}`);
+      
+      // Verify user is participant of this chat
+      const chat = await Chat.findOne({
+        _id: chatId,
+        participants: socket.userId
+      });
+      
+      if (!chat) {
+        socket.leave(`chat:${chatId}`);
+        console.log(`${socket.username} unauthorized for chat: ${chatId}`);
+      }
     });
 
     // Leave chat room

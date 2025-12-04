@@ -51,6 +51,13 @@ exports.createOrGetDirectChat = async (req, res) => {
     chat = await Chat.findById(chat._id)
       .populate('participants', 'username displayName avatar status');
 
+    // Emit new chat to the other participant via Socket.IO
+    const io = req.app.get('io');
+    if (io) {
+      // Notify the other participant about the new chat
+      io.to(`user:${participantId}`).emit('newChat', chat);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Chat created successfully',

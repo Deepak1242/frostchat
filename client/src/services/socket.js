@@ -68,11 +68,19 @@ export const initializeSocket = (token) => {
   // Handle new chat
   socket.on('newChat', (chat) => {
     useChatStore.getState().addChat(chat);
+    // Auto-join the new chat room
+    if (chat._id) {
+      socket.emit('joinChat', chat._id);
+    }
   });
 
   // Handle added to group
   socket.on('addedToGroup', (chat) => {
     useChatStore.getState().addChat(chat);
+    // Auto-join the group chat room
+    if (chat._id) {
+      socket.emit('joinChat', chat._id);
+    }
   });
 
   // Handle removed from group

@@ -11,6 +11,18 @@ export const useChatStore = create((set, get) => ({
   onlineUsers: [], // [userId1, userId2, ...]
   unreadCounts: {}, // { chatId: count }
 
+  // Clear all state on logout
+  clearAll: () => set({
+    chats: [],
+    activeChat: null,
+    messages: [],
+    isLoadingChats: false,
+    isLoadingMessages: false,
+    typingUsers: {},
+    onlineUsers: [],
+    unreadCounts: {}
+  }),
+
   setChats: (chats) => set({ chats }),
 
   setOnlineUsers: (users) => set({ onlineUsers: users }),

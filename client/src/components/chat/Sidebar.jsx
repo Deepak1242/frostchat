@@ -12,6 +12,7 @@ import Modal from '../ui/Modal';
 import { useAuthStore } from '../../store/authStore';
 import { useChatStore } from '../../store/chatStore';
 import api from '../../services/api';
+import { joinChat } from '../../services/socket';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -121,6 +122,11 @@ const Sidebar = () => {
       
       // Handle response format
       const chat = res.data?.data?.chat || res.data?.chat || res.data;
+      
+      // Join the socket room for this chat
+      if (chat._id) {
+        joinChat(chat._id);
+      }
       
       // Add to chats if not already present
       const currentChats = Array.isArray(chats) ? chats : [];

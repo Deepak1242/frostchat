@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../services/api';
 import { disconnectSocket } from '../services/socket';
+import { useChatStore } from './chatStore';
 
 export const useAuthStore = create(
   persist(
@@ -67,6 +68,10 @@ export const useAuthStore = create(
           console.error('Logout error:', error);
         } finally {
           disconnectSocket();
+          
+          // Clear chat store
+          useChatStore.getState().clearAll();
+          
           set({
             user: null,
             token: null,
