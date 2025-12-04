@@ -49,18 +49,57 @@ const Chat = () => {
     };
   }, [activeChat?._id]);
 
+  // Close sidebar on mobile when chat is selected
+  useEffect(() => {
+    if (activeChat && window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+  }, [activeChat]);
+
+  const handleBackToSidebar = () => {
+    setIsSidebarOpen(true);
+    setActiveChat(null);
+  };
+
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)} 
-      />
+    <div className="h-screen flex overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/30">
+      {/* Background decorations */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-0 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl" />
+      </div>
+      
+      {/* Sidebar - hidden on mobile when chat is active */}
+      <div className={`
+        ${isSidebarOpen ? 'flex' : 'hidden'}
+        md:flex
+        w-full md:w-80 lg:w-96
+        flex-shrink-0
+        h-full
+        absolute md:relative
+        z-20
+      `}>
+        <Sidebar 
+          onChatSelect={() => {
+            if (window.innerWidth < 768) {
+              setIsSidebarOpen(false);
+            }
+          }}
+        />
+      </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`
+        ${!isSidebarOpen || activeChat ? 'flex' : 'hidden'}
+        md:flex
+        flex-1 flex-col min-w-0
+        h-full
+      `}>
         {activeChat ? (
-          <ChatView onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+          <ChatView 
+            onBackClick={handleBackToSidebar}
+            showBackButton={window.innerWidth < 768}
+          />
         ) : (
           <WelcomeView />
         )}

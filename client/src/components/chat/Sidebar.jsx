@@ -14,7 +14,7 @@ import { useChatStore } from '../../store/chatStore';
 import api from '../../services/api';
 import { joinChat } from '../../services/socket';
 
-const Sidebar = () => {
+const Sidebar = ({ onChatSelect }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { chats, activeChat, setChats, setActiveChat, unreadCounts } = useChatStore();
@@ -140,6 +140,9 @@ const Sidebar = () => {
       setSearchQuery('');
       setSearchResults([]);
       toast.success('Chat started!');
+      
+      // Close sidebar on mobile after starting chat
+      if (onChatSelect) onChatSelect();
     } catch (error) {
       console.error('Create chat error:', error);
       toast.error(error.response?.data?.message || 'Failed to create chat');
@@ -184,6 +187,9 @@ const Sidebar = () => {
       setGroupSearchQuery('');
       setGroupSearchResults([]);
       toast.success('Group created!');
+      
+      // Close sidebar on mobile after creating group
+      if (onChatSelect) onChatSelect();
     } catch (error) {
       console.error('Create group error:', error);
       toast.error(error.response?.data?.message || 'Failed to create group');
@@ -205,24 +211,33 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="w-80 h-full flex flex-col glass border-r border-white/10">
+    <div className="w-full md:w-80 h-full flex flex-col relative overflow-hidden">
+      {/* Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-emerald-950/80 backdrop-blur-xl" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/3 left-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl" />
+      
+      {/* Content */}
+      <div className="relative z-10 flex flex-col h-full border-r border-white/10">
       {/* Header */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-3 md:p-4 border-b border-white/10 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent">
         <div className="flex items-center justify-between mb-4">
           <Logo size="sm" />
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowNewChatModal(true)}
-              className="p-2 rounded-lg bg-frost-400/20 hover:bg-frost-400/30 
-                       text-frost-300 transition-colors"
+              className="p-2 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 
+                       hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-500/20
+                       text-cyan-300 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/20"
               title="New Chat"
             >
               <FiPlus className="w-5 h-5" />
             </button>
             <button
               onClick={() => setShowGroupModal(true)}
-              className="p-2 rounded-lg bg-frost-400/20 hover:bg-frost-400/30 
-                       text-frost-300 transition-colors"
+              className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 
+                       hover:from-emerald-500/30 hover:to-teal-500/30 border border-emerald-500/20
+                       text-emerald-300 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20"
               title="New Group"
             >
               <FiUsers className="w-5 h-5" />
@@ -233,26 +248,32 @@ const Sidebar = () => {
         {/* User Profile */}
         <Link 
           to="/profile"
-          className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+          className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-white/[0.05] to-white/[0.02] 
+                   border border-white/10 hover:border-white/20 hover:from-white/[0.08] hover:to-white/[0.04]
+                   transition-all duration-300 group"
         >
-          <Avatar 
-            src={user?.avatar} 
-            name={user?.name} 
-            size="md"
-            showStatus
-            isOnline={true}
-          />
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 to-emerald-500 rounded-full blur-sm opacity-50 group-hover:opacity-70 transition-opacity" />
+            <Avatar 
+              src={user?.avatar} 
+              name={user?.name} 
+              size="md"
+              showStatus
+              isOnline={true}
+              className="relative"
+            />
+          </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white font-medium truncate">{user?.name}</p>
-            <p className="text-frost-300 text-sm truncate">{user?.status || 'Available'}</p>
+            <p className="text-white font-semibold truncate">{user?.name}</p>
+            <p className="text-cyan-300/70 text-sm truncate">{user?.status || 'Available'}</p>
           </div>
           <button
             onClick={(e) => {
               e.preventDefault();
               handleLogout();
             }}
-            className="p-2 rounded-lg hover:bg-red-500/20 text-gray-400 
-                     hover:text-red-400 transition-colors"
+            className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400/70 
+                     hover:text-red-400 transition-all duration-300"
             title="Logout"
           >
             <FiLogOut className="w-4 h-4" />
@@ -284,7 +305,11 @@ const Sidebar = () => {
                 <ChatListItem
                   chat={chat}
                   isActive={activeChat?._id === chat._id}
-                  onClick={() => setActiveChat(chat)}
+                  onClick={() => {
+                    setActiveChat(chat);
+                    // Call onChatSelect callback for mobile sidebar toggle
+                    if (onChatSelect) onChatSelect();
+                  }}
                   currentUserId={user._id}
                   unreadCount={unreadCounts[chat._id] || 0}
                 />
@@ -441,6 +466,7 @@ const Sidebar = () => {
           </Button>
         </div>
       </Modal>
+      </div>
     </div>
   );
 };

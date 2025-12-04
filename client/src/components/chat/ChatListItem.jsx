@@ -62,54 +62,68 @@ const ChatListItem = ({ chat, onClick, unreadCount = 0 }) => {
     <div
       onClick={onClick}
       className={`
-        flex items-center gap-3 p-3 mx-2 rounded-xl cursor-pointer transition-all
+        flex items-center gap-2 md:gap-3 p-2.5 md:p-3.5 mx-2 my-1 rounded-2xl cursor-pointer 
+        transition-all duration-300 relative group
         ${isActive 
-          ? 'bg-frost-500/20 border border-frost-500/30' 
-          : 'hover:bg-white/5'}
+          ? 'bg-gradient-to-r from-cyan-500/20 via-teal-500/15 to-emerald-500/20 border border-cyan-500/30 shadow-lg shadow-cyan-500/10' 
+          : 'hover:bg-gradient-to-r hover:from-white/[0.06] hover:to-white/[0.02] active:scale-[0.98]'}
       `}
     >
+      {/* Active indicator line */}
+      {isActive && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-cyan-400 to-emerald-500 rounded-r-full" />
+      )}
+      
       {/* Avatar */}
       <div className="relative flex-shrink-0">
         {displayInfo.isGroup ? (
-          <div className="w-12 h-12 rounded-full glass flex items-center justify-center ring-2 ring-frost-400/20">
-            <Users className="w-6 h-6 text-frost-300" />
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-teal-500/30 
+                        flex items-center justify-center border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
+            <Users className="w-5 h-5 md:w-6 md:h-6 text-emerald-300" />
           </div>
         ) : (
-          <Avatar
-            src={displayInfo.avatar}
-            alt={displayInfo.name}
-            size="lg"
-            status={isOnline ? 'online' : displayInfo.status}
-          />
+          <div className="relative">
+            {isOnline && (
+              <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full blur-md opacity-30 animate-pulse" />
+            )}
+            <Avatar
+              src={displayInfo.avatar}
+              alt={displayInfo.name}
+              size="md"
+              className="w-10 h-10 md:w-12 md:h-12 relative"
+              status={isOnline ? 'online' : displayInfo.status}
+            />
+          </div>
         )}
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-medium truncate">{displayInfo.name}</h3>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <h3 className="font-semibold text-sm md:text-base truncate text-white/90 group-hover:text-white transition-colors">{displayInfo.name}</h3>
+          <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
             {chat.lastMessage && (
-              <span className="text-xs text-frost-400">
+              <span className="text-[10px] md:text-xs text-slate-400">
                 {formatDistanceToNow(new Date(chat.lastMessage.createdAt), { addSuffix: false })}
               </span>
             )}
             {/* Unread count bubble */}
             {unreadCount > 0 && !isActive && (
-              <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center 
-                             bg-frost-500 text-white text-xs font-bold rounded-full">
+              <span className="min-w-[18px] md:min-w-[20px] h-4 md:h-5 px-1.5 md:px-2 flex items-center justify-center 
+                             bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-[10px] md:text-xs font-bold 
+                             rounded-full shadow-lg shadow-cyan-500/30 animate-pulse">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
           </div>
         </div>
-        <p className="text-sm text-frost-400 truncate">
+        <p className="text-xs md:text-sm text-slate-400 truncate mt-0.5">
           {isTyping ? (
-            <span className="text-frost-300 flex items-center gap-1">
+            <span className="text-cyan-400 flex items-center gap-1.5">
               <span className="flex gap-0.5">
-                <span className="w-1 h-1 bg-frost-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1 h-1 bg-frost-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1 h-1 bg-frost-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </span>
               {chatTypingUsers.length === 1 
                 ? `${chatTypingUsers[0].username} is typing...`

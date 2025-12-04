@@ -70,14 +70,14 @@ const MessageList = () => {
   return (
     <div 
       ref={containerRef}
-      className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+      className="flex-1 overflow-y-auto px-2 md:px-4 py-2 md:py-4 space-y-3 md:space-y-4"
     >
       {Object.entries(messageGroups).map(([date, msgs]) => (
         <div key={date}>
           {/* Date separator */}
-          <div className="flex items-center gap-4 my-4">
+          <div className="flex items-center gap-3 md:gap-4 my-3 md:my-4">
             <div className="flex-1 h-px bg-frost-700/30" />
-            <span className="text-xs text-frost-400 font-medium">{date}</span>
+            <span className="text-[10px] md:text-xs text-frost-400 font-medium whitespace-nowrap">{date}</span>
             <div className="flex-1 h-px bg-frost-700/30" />
           </div>
           

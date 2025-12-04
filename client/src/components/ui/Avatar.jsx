@@ -24,21 +24,31 @@ const Avatar = ({
   };
 
   const statusColors = {
-    online: 'bg-green-400',
-    offline: 'bg-gray-400',
-    away: 'bg-yellow-400',
-    busy: 'bg-red-400'
+    online: 'bg-gradient-to-br from-green-400 to-emerald-500',
+    offline: 'bg-gradient-to-br from-slate-400 to-slate-500',
+    away: 'bg-gradient-to-br from-yellow-400 to-amber-500',
+    busy: 'bg-gradient-to-br from-red-400 to-rose-500'
+  };
+
+  const statusGlow = {
+    online: 'shadow-lg shadow-green-500/50',
+    offline: '',
+    away: 'shadow-lg shadow-yellow-500/50',
+    busy: 'shadow-lg shadow-red-500/50'
   };
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative group ${className}`}>
+      {/* Gradient ring on hover */}
       <div className={`
         ${sizes[size]} 
         rounded-full 
         overflow-hidden 
-        glass 
+        bg-gradient-to-br from-slate-700/80 to-slate-800/80 backdrop-blur-sm
         flex items-center justify-center
-        ring-2 ring-frost-400/20
+        ring-2 ring-white/10 group-hover:ring-cyan-500/30
+        transition-all duration-300
+        shadow-lg shadow-black/20
       `}>
         {src ? (
           <img 
@@ -47,7 +57,9 @@ const Avatar = ({
             className="w-full h-full object-cover"
           />
         ) : (
-          <User className="w-1/2 h-1/2 text-frost-300" />
+          <div className="w-full h-full bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 flex items-center justify-center">
+            <User className="w-1/2 h-1/2 text-slate-400" />
+          </div>
         )}
       </div>
       {status && (
@@ -55,8 +67,10 @@ const Avatar = ({
           absolute bottom-0 right-0
           ${statusSizes[size]}
           ${statusColors[status]}
+          ${statusGlow[status]}
           rounded-full
-          ring-2 ring-frost-900
+          ring-2 ring-slate-900
+          ${status === 'online' ? 'animate-pulse' : ''}
         `} />
       )}
     </div>
