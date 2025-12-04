@@ -52,14 +52,17 @@ export const initializeSocket = (token) => {
 
   // Handle online users
   socket.on('onlineUsers', (users) => {
+    console.log('📡 Received online users list:', users);
     useChatStore.getState().setOnlineUsers(users);
   });
 
   socket.on('userOnline', ({ userId }) => {
+    console.log('📡 User came online:', userId);
     useChatStore.getState().addOnlineUser(userId);
   });
 
   socket.on('userOffline', ({ userId }) => {
+    console.log('📡 User went offline:', userId);
     useChatStore.getState().removeOnlineUser(userId);
   });
 

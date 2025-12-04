@@ -137,10 +137,12 @@ const initializeSocket = (io) => {
       const userData = onlineUsers.get(socket.userId);
       if (userData) {
         userData.socketIds.delete(socket.id);
+        console.log(`📡 ${socket.username} has ${userData.socketIds.size} remaining connections`);
         
         // If no more sockets, user is fully offline
         if (userData.socketIds.size === 0) {
           onlineUsers.delete(socket.userId);
+          console.log(`📴 ${socket.username} is now fully offline`);
           
           // Update user status to offline
           await User.findByIdAndUpdate(socket.userId, { 
@@ -148,11 +150,12 @@ const initializeSocket = (io) => {
             lastSeen: new Date()
           });
 
-          // Broadcast offline status
+          // Broadcast offline status to ALL connected clients
           io.emit('userOffline', {
             userId: socket.userId,
             username: socket.username
           });
+          console.log(`📡 Emitted userOffline for ${socket.username} (${socket.userId})`);
         }
       }
     });
