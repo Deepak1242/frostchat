@@ -1,0 +1,8 @@
+{
+  "name": "frostchat-api",
+  "env": {
+    "NODE_VERSION": "18"
+  },
+  "buildCommand": "npm install",
+  "startCommand": "node src/index.js"
+}

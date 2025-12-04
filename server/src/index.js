@@ -19,18 +19,33 @@ const app = express();
 const server = http.createServer(app);
 
 // Socket.IO setup
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://frostchat.vercel.app',
+  /\.vercel\.app$/
+].filter(Boolean);
+
 const io = new Server(server, {
   cors: {
-    origin: [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:5174'],
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
-  }
+  },
+  transports: ['websocket', 'polling']
 });
 
 // Middleware
 app.use(cors({
-  origin: [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:5174'],
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    const allowed = allowedOrigins.some(o => 
+      o instanceof RegExp ? o.test(origin) : o === origin
+    );
+    callback(null, allowed);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
