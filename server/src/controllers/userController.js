@@ -135,13 +135,13 @@ exports.searchUsers = async (req, res) => {
         {
           $or: [
             { username: { $regex: q, $options: 'i' } },
-            { name: { $regex: q, $options: 'i' } },
+            { displayName: { $regex: q, $options: 'i' } },
             { email: { $regex: q, $options: 'i' } }
           ]
         }
       ]
     })
-    .select('username name avatar isOnline lastSeen')
+    .select('username displayName avatar status lastSeen')
     .limit(20);
 
     res.json(users);

@@ -34,9 +34,12 @@ const Sidebar = () => {
     const fetchChats = async () => {
       try {
         const res = await api.get('/chats');
-        setChats(res.data);
+        // Handle response format: { success, data: { chats } } or direct array
+        const chatsList = res.data?.data?.chats || res.data?.chats || res.data || [];
+        setChats(Array.isArray(chatsList) ? chatsList : []);
       } catch (error) {
         toast.error('Failed to load chats');
+        setChats([]);
       } finally {
         setLoading(false);
       }
@@ -112,22 +115,28 @@ const Sidebar = () => {
 
   const handleStartChat = async (selectedUser) => {
     try {
-      const res = await api.post('/chats', {
-        userId: selectedUser._id
+      const res = await api.post('/chats/direct', {
+        participantId: selectedUser._id
       });
       
+      // Handle response format
+      const chat = res.data?.data?.chat || res.data?.chat || res.data;
+      
       // Add to chats if not already present
-      const chatExists = chats.find(c => c._id === res.data._id);
+      const currentChats = Array.isArray(chats) ? chats : [];
+      const chatExists = currentChats.find(c => c._id === chat._id);
       if (!chatExists) {
-        setChats([res.data, ...chats]);
+        setChats([chat, ...currentChats]);
       }
       
-      setActiveChat(res.data);
+      setActiveChat(chat);
       setShowNewChatModal(false);
       setSearchQuery('');
       setSearchResults([]);
+      toast.success('Chat started!');
     } catch (error) {
-      toast.error('Failed to create chat');
+      console.error('Create chat error:', error);
+      toast.error(error.response?.data?.message || 'Failed to create chat');
     }
   };
 
@@ -154,11 +163,15 @@ const Sidebar = () => {
     try {
       const res = await api.post('/chats/group', {
         name: groupName,
-        members: selectedUsers.map(u => u._id)
+        participantIds: selectedUsers.map(u => u._id)
       });
       
-      setChats([res.data, ...chats]);
-      setActiveChat(res.data);
+      // Handle response format
+      const chat = res.data?.data?.chat || res.data?.chat || res.data;
+      const currentChats = Array.isArray(chats) ? chats : [];
+      
+      setChats([chat, ...currentChats]);
+      setActiveChat(chat);
       setShowGroupModal(false);
       setGroupName('');
       setSelectedUsers([]);
@@ -166,7 +179,8 @@ const Sidebar = () => {
       setGroupSearchResults([]);
       toast.success('Group created!');
     } catch (error) {
-      toast.error('Failed to create group');
+      console.error('Create group error:', error);
+      toast.error(error.response?.data?.message || 'Failed to create group');
     }
   };
 
@@ -247,7 +261,7 @@ const Sidebar = () => {
             <div className="w-8 h-8 border-2 border-frost-400 border-t-transparent 
                           rounded-full animate-spin" />
           </div>
-        ) : chats.length === 0 ? (
+        ) : !Array.isArray(chats) || chats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-gray-400">
             <p>No chats yet</p>
             <p className="text-sm">Click + to start a conversation</p>
@@ -315,18 +329,18 @@ const Sidebar = () => {
                   key={u._id}
                   onClick={() => handleStartChat(u)}
                   className="w-full flex items-center gap-3 p-3 rounded-lg 
-                           hover:bg-frost-400/10 transition-colors"
+                           hover:bg-frost-400/10 transition-colors text-left"
                 >
                   <Avatar 
-                    src={u.avatar} 
-                    name={u.name} 
+                    src={u.avatar?.url || u.avatar} 
+                    name={u.name || u.displayName || u.username} 
                     size="md"
                     showStatus
-                    isOnline={u.isOnline}
+                    isOnline={u.isOnline || u.status === 'online'}
                   />
-                  <div className="text-left">
-                    <p className="text-white font-medium">{u.name}</p>
-                    <p className="text-gray-400 text-sm">@{u.username}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium truncate">{u.name || u.displayName || u.username}</p>
+                    <p className="text-gray-400 text-sm truncate">@{u.username}</p>
                   </div>
                 </button>
               ))
@@ -358,7 +372,7 @@ const Sidebar = () => {
                   className="flex items-center gap-1 px-2 py-1 bg-frost-400/20 
                            rounded-full text-sm text-frost-300"
                 >
-                  {u.name}
+                  {u.name || u.displayName || u.username}
                   <button
                     onClick={() => handleRemoveUser(u._id)}
                     className="hover:text-white"
@@ -404,12 +418,12 @@ const Sidebar = () => {
                   key={u._id}
                   onClick={() => handleSelectUser(u)}
                   className="w-full flex items-center gap-3 p-2 rounded-lg 
-                           hover:bg-frost-400/10 transition-colors"
+                           hover:bg-frost-400/10 transition-colors text-left"
                 >
-                  <Avatar src={u.avatar} name={u.name} size="sm" />
-                  <div className="text-left">
-                    <p className="text-white text-sm">{u.name}</p>
-                    <p className="text-gray-400 text-xs">@{u.username}</p>
+                  <Avatar src={u.avatar?.url || u.avatar} name={u.name || u.displayName || u.username} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm truncate">{u.name || u.displayName || u.username}</p>
+                    <p className="text-gray-400 text-xs truncate">@{u.username}</p>
                   </div>
                 </button>
               ))

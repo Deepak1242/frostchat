@@ -9,7 +9,7 @@ const ChatListItem = ({ chat, onClick, unreadCount = 0 }) => {
   const { activeChat, onlineUsers, typingUsers } = useChatStore();
   const isActive = activeChat?._id === chat._id;
 
-  // Get display info for the chat
+  // Get display info for the chat l !! 
   const getDisplayInfo = () => {
     if (chat.isGroupChat) {
       return {
