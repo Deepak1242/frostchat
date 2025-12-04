@@ -25,15 +25,20 @@ export const useChatStore = create((set, get) => ({
 
   setChats: (chats) => set({ chats }),
 
-  setOnlineUsers: (users) => set({ onlineUsers: users }),
+  setOnlineUsers: (users) => {
+    console.log('📡 Online users updated:', users);
+    set({ onlineUsers: Array.isArray(users) ? users : [] });
+  },
 
   addOnlineUser: (userId) => {
+    console.log('📡 User came online:', userId);
     set((state) => ({
       onlineUsers: [...new Set([...state.onlineUsers, userId])]
     }));
   },
 
   removeOnlineUser: (userId) => {
+    console.log('📡 User went offline:', userId);
     set((state) => ({
       onlineUsers: state.onlineUsers.filter(id => id !== userId)
     }));

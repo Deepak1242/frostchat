@@ -4,22 +4,41 @@ import { useChatStore } from '../store/chatStore';
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
 let socket = null;
+let isInitializing = false;
 
 export const initializeSocket = (token) => {
+  // Prevent duplicate initialization
+  if (isInitializing) {
+    return socket;
+  }
+  
+  // If already connected with same token, return existing socket
   if (socket?.connected) {
     return socket;
   }
+  
+  // If socket exists but disconnected, clean it up first
+  if (socket) {
+    socket.removeAllListeners();
+    socket.disconnect();
+    socket = null;
+  }
+
+  isInitializing = true;
 
   socket = io(SOCKET_URL, {
     auth: { token },
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionAttempts: 5,
-    reconnectionDelay: 1000
+    reconnectionDelay: 1000,
+    forceNew: false,
+    multiplex: true
   });
 
   socket.on('connect', () => {
-    console.log('🔌 Socket connected');
+    console.log('🔌 Socket connected:', socket.id);
+    isInitializing = false;
   });
 
   socket.on('disconnect', (reason) => {
@@ -28,6 +47,7 @@ export const initializeSocket = (token) => {
 
   socket.on('connect_error', (error) => {
     console.error('Socket connection error:', error.message);
+    isInitializing = false;
   });
 
   // Handle online users

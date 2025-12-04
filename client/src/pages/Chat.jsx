@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useChatStore } from '../store/chatStore';
@@ -12,10 +12,12 @@ const Chat = () => {
   const { token } = useAuthStore();
   const { activeChat, setActiveChat, fetchChats, chats } = useChatStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const socketInitialized = useRef(false);
 
-  // Initialize socket connection
+  // Initialize socket connection - only once
   useEffect(() => {
-    if (token) {
+    if (token && !socketInitialized.current) {
+      socketInitialized.current = true;
       initializeSocket(token);
     }
   }, [token]);
