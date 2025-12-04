@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="frostGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#38bdf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <circle cx="50" cy="50" r="45" fill="url(#frostGrad)" filter="url(#glow)" opacity="0.9"/>
+  <path d="M50 15 L50 85 M25 30 L75 70 M75 30 L25 70" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+  <circle cx="50" cy="50" r="8" fill="white" opacity="0.95"/>
+</svg>
