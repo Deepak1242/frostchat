@@ -27,21 +27,27 @@ export const useChatStore = create((set, get) => ({
 
   setOnlineUsers: (users) => {
     console.log('📡 Online users updated:', users);
-    set({ onlineUsers: Array.isArray(users) ? users : [] });
+    // Ensure all IDs are strings for consistent comparison
+    const stringIds = Array.isArray(users) ? users.map(id => String(id)) : [];
+    set({ onlineUsers: stringIds });
   },
 
   addOnlineUser: (userId) => {
-    console.log('📡 User came online:', userId);
+    const id = String(userId);
+    console.log('📡 User came online:', id);
     set((state) => ({
-      onlineUsers: [...new Set([...state.onlineUsers, userId])]
+      onlineUsers: [...new Set([...state.onlineUsers, id])]
     }));
   },
 
   removeOnlineUser: (userId) => {
-    console.log('📡 User went offline:', userId);
-    set((state) => ({
-      onlineUsers: state.onlineUsers.filter(id => id !== userId)
-    }));
+    const id = String(userId);
+    console.log('📡 User went offline:', id);
+    set((state) => {
+      const newOnlineUsers = state.onlineUsers.filter(uid => uid !== id);
+      console.log('📡 Updated online users:', newOnlineUsers);
+      return { onlineUsers: newOnlineUsers };
+    });
   },
 
   incrementUnread: (chatId) => {

@@ -29,7 +29,11 @@ const ChatListItem = ({ chat, onClick, unreadCount = 0 }) => {
   };
 
   const displayInfo = getDisplayInfo();
-  const isOnline = displayInfo.userId && onlineUsers.includes(displayInfo.userId);
+  
+  // Check if user is online - ensure string comparison
+  const isOnline = displayInfo.userId && onlineUsers.some(id => 
+    String(id) === String(displayInfo.userId)
+  );
 
   // Get last message preview
   const getLastMessagePreview = () => {
