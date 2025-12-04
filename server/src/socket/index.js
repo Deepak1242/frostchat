@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Chat = require('../models/Chat');
 
 // Store online users: { oderId: { oderId, username, socketIds: Set } }
 const onlineUsers = new Map();
@@ -46,6 +47,12 @@ const initializeSocket = (io) => {
 
     // Join user's personal room
     socket.join(`user:${socket.userId}`);
+
+    // Auto-join all user's chat rooms for instant messaging
+    const userChats = await Chat.find({ participants: socket.userId });
+    userChats.forEach(chat => {
+      socket.join(`chat:${chat._id}`);
+    });
 
     // Update user status to online
     await User.findByIdAndUpdate(socket.userId, { 

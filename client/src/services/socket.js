@@ -50,8 +50,19 @@ export const initializeSocket = (token) => {
 
   // Handle new messages
   socket.on('newMessage', (message) => {
-    useChatStore.getState().addMessage(message);
-    useChatStore.getState().updateChatLastMessage(message.chat, message);
+    const store = useChatStore.getState();
+    const chatId = message.chat?._id || message.chat;
+    
+    // Add message to messages list if it's for the active chat
+    store.addMessage(message);
+    
+    // Update last message for the chat
+    store.updateChatLastMessage(chatId, message);
+    
+    // If message is not for active chat, increment unread count
+    if (store.activeChat?._id !== chatId) {
+      store.incrementUnread(chatId);
+    }
   });
 
   // Handle new chat

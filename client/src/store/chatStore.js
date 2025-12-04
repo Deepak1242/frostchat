@@ -11,6 +11,8 @@ export const useChatStore = create((set, get) => ({
   onlineUsers: [], // [userId1, userId2, ...]
   unreadCounts: {}, // { chatId: count }
 
+  setChats: (chats) => set({ chats }),
+
   setOnlineUsers: (users) => set({ onlineUsers: users }),
 
   addOnlineUser: (userId) => {
@@ -22,6 +24,24 @@ export const useChatStore = create((set, get) => ({
   removeOnlineUser: (userId) => {
     set((state) => ({
       onlineUsers: state.onlineUsers.filter(id => id !== userId)
+    }));
+  },
+
+  incrementUnread: (chatId) => {
+    set((state) => ({
+      unreadCounts: {
+        ...state.unreadCounts,
+        [chatId]: (state.unreadCounts[chatId] || 0) + 1
+      }
+    }));
+  },
+
+  clearUnread: (chatId) => {
+    set((state) => ({
+      unreadCounts: {
+        ...state.unreadCounts,
+        [chatId]: 0
+      }
     }));
   },
 
@@ -67,6 +87,7 @@ export const useChatStore = create((set, get) => ({
     set({ activeChat: chat, messages: [] });
     if (chat) {
       get().fetchMessages(chat._id);
+      get().clearUnread(chat._id);
     }
   },
 

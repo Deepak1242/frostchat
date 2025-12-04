@@ -87,9 +87,23 @@ userSchema.pre('save', function(next) {
   next();
 });
 
+// Virtual for 'name' field (alias for displayName for frontend compatibility)
+userSchema.virtual('name').get(function() {
+  return this.displayName || this.username;
+});
+
+// Virtual for 'isOnline' based on status
+userSchema.virtual('isOnline').get(function() {
+  return this.status === 'online';
+});
+
+// Ensure virtuals are included in JSON and Object output
+userSchema.set('toJSON', { virtuals: true });
+userSchema.set('toObject', { virtuals: true });
+
 // Remove sensitive data when converting to JSON
 userSchema.methods.toJSON = function() {
-  const user = this.toObject();
+  const user = this.toObject({ virtuals: true });
   delete user.password;
   return user;
 };

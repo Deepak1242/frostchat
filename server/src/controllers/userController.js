@@ -123,13 +123,10 @@ exports.updateAvatar = async (req, res) => {
 // Search users
 exports.searchUsers = async (req, res) => {
   try {
-    const { query } = req.query;
+    const { q } = req.query;
     
-    if (!query || query.length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: 'Search query must be at least 2 characters'
-      });
+    if (!q || q.length < 1) {
+      return res.json([]);
     }
 
     const users = await User.find({
@@ -137,20 +134,17 @@ exports.searchUsers = async (req, res) => {
         { _id: { $ne: req.userId } }, // Exclude current user
         {
           $or: [
-            { username: { $regex: query, $options: 'i' } },
-            { displayName: { $regex: query, $options: 'i' } },
-            { email: { $regex: query, $options: 'i' } }
+            { username: { $regex: q, $options: 'i' } },
+            { name: { $regex: q, $options: 'i' } },
+            { email: { $regex: q, $options: 'i' } }
           ]
         }
       ]
     })
-    .select('username displayName avatar status')
+    .select('username name avatar isOnline lastSeen')
     .limit(20);
 
-    res.json({
-      success: true,
-      data: { users }
-    });
+    res.json(users);
   } catch (error) {
     console.error('Search users error:', error);
     res.status(500).json({

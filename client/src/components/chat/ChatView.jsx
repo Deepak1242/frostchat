@@ -46,7 +46,7 @@ const ChatView = ({ onMenuClick }) => {
     const isOnline = otherUser && onlineUsers.includes(otherUser._id);
     
     return {
-      name: otherUser?.displayName || 'Unknown User',
+      name: otherUser?.name || otherUser?.displayName || 'Unknown User',
       avatar: otherUser?.avatar?.url,
       status: isOnline ? 'online' : otherUser?.status,
       isGroup: false

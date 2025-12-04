@@ -1,72 +1,144 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  Plus, 
-  Users, 
-  Settings, 
-  Menu,
-  X,
-  MessageCircle
-} from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiPlus, FiLogOut, FiUsers, FiSearch, FiX } from 'react-icons/fi';
+import toast from 'react-hot-toast';
+import ChatListItem from './ChatListItem';
+import Logo from '../ui/Logo';
+import Avatar from '../ui/Avatar';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
+import Modal from '../ui/Modal';
 import { useAuthStore } from '../../store/authStore';
 import { useChatStore } from '../../store/chatStore';
 import api from '../../services/api';
-import Avatar from '../ui/Avatar';
-import Logo from '../ui/Logo';
-import Modal from '../ui/Modal';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
-import ChatListItem from './ChatListItem';
-import toast from 'react-hot-toast';
 
-const Sidebar = ({ isOpen, onToggle }) => {
+const Sidebar = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const { chats, isLoadingChats, setActiveChat, createDirectChat, createGroupChat } = useChatStore();
-  
+  const { user, logout } = useAuthStore();
+  const { chats, activeChat, setChats, setActiveChat, unreadCounts } = useChatStore();
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
-  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
-  const [users, setUsers] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [groupName, setGroupName] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
+  const [groupSearchQuery, setGroupSearchQuery] = useState('');
+  const [groupSearchResults, setGroupSearchResults] = useState([]);
+  const [isGroupSearching, setIsGroupSearching] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch users for new chat
+  // Fetch user's chats
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchChats = async () => {
       try {
-        const response = await api.get('/users/all');
-        setUsers(response.data.data.users);
+        const res = await api.get('/chats');
+        setChats(res.data);
       } catch (error) {
-        console.error('Failed to fetch users:', error);
+        toast.error('Failed to load chats');
+      } finally {
+        setLoading(false);
       }
     };
-    fetchUsers();
-  }, []);
+    fetchChats();
+  }, [setChats]);
 
-  // Filter chats based on search
-  const filteredChats = chats.filter(chat => {
-    const searchLower = searchQuery.toLowerCase();
-    if (chat.isGroupChat) {
-      return chat.name?.toLowerCase().includes(searchLower);
+  // Search users by username (debounced)
+  const searchUsers = useCallback(async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
     }
-    const otherUser = chat.participants.find(p => p._id !== user?._id);
-    return otherUser?.displayName?.toLowerCase().includes(searchLower) ||
-           otherUser?.username?.toLowerCase().includes(searchLower);
-  });
 
-  const handleStartChat = async (userId) => {
-    setIsCreating(true);
-    const result = await createDirectChat(userId);
-    if (result.success) {
-      setIsNewChatModalOpen(false);
-      navigate(`/chat/${result.chat._id}`);
-    } else {
-      toast.error(result.message);
+    setIsSearching(true);
+    try {
+      const res = await api.get(`/users/search?q=${encodeURIComponent(query)}`);
+      // Filter out current user
+      const filtered = res.data.filter(u => u._id !== user._id);
+      setSearchResults(filtered);
+    } catch (error) {
+      toast.error('Search failed');
+    } finally {
+      setIsSearching(false);
     }
-    setIsCreating(false);
+  }, [user._id]);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (showNewChatModal) {
+        searchUsers(searchQuery);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchUsers, showNewChatModal]);
+
+  // Search users for group (debounced)
+  const searchUsersForGroup = useCallback(async (query) => {
+    if (!query.trim()) {
+      setGroupSearchResults([]);
+      return;
+    }
+
+    setIsGroupSearching(true);
+    try {
+      const res = await api.get(`/users/search?q=${encodeURIComponent(query)}`);
+      // Filter out current user and already selected users
+      const selectedIds = selectedUsers.map(u => u._id);
+      const filtered = res.data.filter(u => u._id !== user._id && !selectedIds.includes(u._id));
+      setGroupSearchResults(filtered);
+    } catch (error) {
+      toast.error('Search failed');
+    } finally {
+      setIsGroupSearching(false);
+    }
+  }, [user._id, selectedUsers]);
+
+  // Debounce group search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (showGroupModal) {
+        searchUsersForGroup(groupSearchQuery);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [groupSearchQuery, searchUsersForGroup, showGroupModal]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  const handleStartChat = async (selectedUser) => {
+    try {
+      const res = await api.post('/chats', {
+        userId: selectedUser._id
+      });
+      
+      // Add to chats if not already present
+      const chatExists = chats.find(c => c._id === res.data._id);
+      if (!chatExists) {
+        setChats([res.data, ...chats]);
+      }
+      
+      setActiveChat(res.data);
+      setShowNewChatModal(false);
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (error) {
+      toast.error('Failed to create chat');
+    }
+  };
+
+  const handleSelectUser = (selectedUser) => {
+    setSelectedUsers([...selectedUsers, selectedUser]);
+    setGroupSearchQuery('');
+    setGroupSearchResults([]);
+  };
+
+  const handleRemoveUser = (userId) => {
+    setSelectedUsers(selectedUsers.filter(u => u._id !== userId));
   };
 
   const handleCreateGroup = async () => {
@@ -79,224 +151,277 @@ const Sidebar = ({ isOpen, onToggle }) => {
       return;
     }
 
-    setIsCreating(true);
-    const result = await createGroupChat(groupName, selectedUsers);
-    if (result.success) {
-      setIsGroupModalOpen(false);
+    try {
+      const res = await api.post('/chats/group', {
+        name: groupName,
+        members: selectedUsers.map(u => u._id)
+      });
+      
+      setChats([res.data, ...chats]);
+      setActiveChat(res.data);
+      setShowGroupModal(false);
       setGroupName('');
       setSelectedUsers([]);
-      navigate(`/chat/${result.chat._id}`);
-    } else {
-      toast.error(result.message);
+      setGroupSearchQuery('');
+      setGroupSearchResults([]);
+      toast.success('Group created!');
+    } catch (error) {
+      toast.error('Failed to create group');
     }
-    setIsCreating(false);
   };
 
-  const toggleUserSelection = (userId) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId)
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    );
+  const closeNewChatModal = () => {
+    setShowNewChatModal(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  const closeGroupModal = () => {
+    setShowGroupModal(false);
+    setGroupName('');
+    setSelectedUsers([]);
+    setGroupSearchQuery('');
+    setGroupSearchResults([]);
   };
 
   return (
-    <>
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
-          onClick={onToggle}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`
-        fixed lg:relative inset-y-0 left-0 z-30
-        w-80 flex flex-col
-        glass border-r border-frost-800/30
-        transform transition-transform duration-300
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        {/* Header */}
-        <div className="p-4 border-b border-frost-800/30">
-          <div className="flex items-center justify-between mb-4">
-            <Logo size="sm" />
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsNewChatModalOpen(true)}
-                className="p-2 rounded-xl hover:bg-white/10 transition-colors"
-                title="New Chat"
-              >
-                <Plus className="w-5 h-5 text-frost-300" />
-              </button>
-              <button
-                onClick={() => setIsGroupModalOpen(true)}
-                className="p-2 rounded-xl hover:bg-white/10 transition-colors"
-                title="New Group"
-              >
-                <Users className="w-5 h-5 text-frost-300" />
-              </button>
-              <button
-                onClick={onToggle}
-                className="p-2 rounded-xl hover:bg-white/10 transition-colors lg:hidden"
-              >
-                <X className="w-5 h-5 text-frost-300" />
-              </button>
-            </div>
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-frost-400" />
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm"
-            />
+    <div className="w-80 h-full flex flex-col glass border-r border-white/10">
+      {/* Header */}
+      <div className="p-4 border-b border-white/10">
+        <div className="flex items-center justify-between mb-4">
+          <Logo size="sm" />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowNewChatModal(true)}
+              className="p-2 rounded-lg bg-frost-400/20 hover:bg-frost-400/30 
+                       text-frost-300 transition-colors"
+              title="New Chat"
+            >
+              <FiPlus className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setShowGroupModal(true)}
+              className="p-2 rounded-lg bg-frost-400/20 hover:bg-frost-400/30 
+                       text-frost-300 transition-colors"
+              title="New Group"
+            >
+              <FiUsers className="w-5 h-5" />
+            </button>
           </div>
         </div>
-
-        {/* Chat List */}
-        <div className="flex-1 overflow-y-auto py-2">
-          {isLoadingChats ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="w-8 h-8 border-2 border-frost-400 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : filteredChats.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-frost-400">
-              <MessageCircle className="w-8 h-8 mb-2 opacity-50" />
-              <p className="text-sm">No conversations yet</p>
-            </div>
-          ) : (
-            filteredChats.map(chat => (
-              <ChatListItem 
-                key={chat._id} 
-                chat={chat}
-                onClick={() => {
-                  setActiveChat(chat);
-                  navigate(`/chat/${chat._id}`);
-                  if (window.innerWidth < 1024) onToggle();
-                }}
-              />
-            ))
-          )}
-        </div>
-
-        {/* User Profile Footer */}
-        <div className="p-4 border-t border-frost-800/30">
-          <div 
-            onClick={() => navigate('/profile')}
-            className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors"
+        
+        {/* User Profile */}
+        <Link 
+          to="/profile"
+          className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+        >
+          <Avatar 
+            src={user?.avatar} 
+            name={user?.name} 
+            size="md"
+            showStatus
+            isOnline={true}
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-medium truncate">{user?.name}</p>
+            <p className="text-frost-300 text-sm truncate">{user?.status || 'Available'}</p>
+          </div>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              handleLogout();
+            }}
+            className="p-2 rounded-lg hover:bg-red-500/20 text-gray-400 
+                     hover:text-red-400 transition-colors"
+            title="Logout"
           >
-            <Avatar 
-              src={user?.avatar?.url} 
-              alt={user?.displayName}
-              size="sm"
-              status={user?.status}
-            />
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{user?.displayName}</p>
-              <p className="text-xs text-frost-400 truncate">@{user?.username}</p>
-            </div>
-            <Settings className="w-4 h-4 text-frost-400" />
-          </div>
-        </div>
-      </aside>
+            <FiLogOut className="w-4 h-4" />
+          </button>
+        </Link>
+      </div>
 
-      {/* New Chat Modal */}
+      {/* Chat List */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin">
+        {loading ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="w-8 h-8 border-2 border-frost-400 border-t-transparent 
+                          rounded-full animate-spin" />
+          </div>
+        ) : chats.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+            <p>No chats yet</p>
+            <p className="text-sm">Click + to start a conversation</p>
+          </div>
+        ) : (
+          <AnimatePresence>
+            {chats.map((chat, index) => (
+              <motion.div
+                key={chat._id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <ChatListItem
+                  chat={chat}
+                  isActive={activeChat?._id === chat._id}
+                  onClick={() => setActiveChat(chat)}
+                  currentUserId={user._id}
+                  unreadCount={unreadCounts[chat._id] || 0}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
+      </div>
+
+      {/* New Chat Modal - Search Based */}
       <Modal
-        isOpen={isNewChatModalOpen}
-        onClose={() => setIsNewChatModalOpen(false)}
+        isOpen={showNewChatModal}
+        onClose={closeNewChatModal}
         title="Start New Chat"
       >
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {users.map(u => (
-            <div
-              key={u._id}
-              onClick={() => !isCreating && handleStartChat(u._id)}
-              className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors"
-            >
-              <Avatar 
-                src={u.avatar?.url} 
-                alt={u.displayName}
-                size="sm"
-                status={u.status}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{u.displayName}</p>
-                <p className="text-xs text-frost-400 truncate">@{u.username}</p>
+        <div className="space-y-4">
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by username..."
+              className="w-full pl-10 pr-4 py-3 bg-dark-700/50 border border-white/10 
+                       rounded-lg text-white placeholder-gray-400 focus:outline-none 
+                       focus:border-frost-400/50 transition-colors"
+              autoFocus
+            />
+          </div>
+
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {isSearching ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-frost-400 border-t-transparent 
+                              rounded-full animate-spin" />
               </div>
-            </div>
-          ))}
+            ) : searchQuery.trim() === '' ? (
+              <p className="text-center text-gray-400 py-8">
+                Enter a username to search
+              </p>
+            ) : searchResults.length === 0 ? (
+              <p className="text-center text-gray-400 py-8">
+                No users found
+              </p>
+            ) : (
+              searchResults.map(u => (
+                <button
+                  key={u._id}
+                  onClick={() => handleStartChat(u)}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg 
+                           hover:bg-frost-400/10 transition-colors"
+                >
+                  <Avatar 
+                    src={u.avatar} 
+                    name={u.name} 
+                    size="md"
+                    showStatus
+                    isOnline={u.isOnline}
+                  />
+                  <div className="text-left">
+                    <p className="text-white font-medium">{u.name}</p>
+                    <p className="text-gray-400 text-sm">@{u.username}</p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
         </div>
       </Modal>
 
-      {/* Create Group Modal */}
+      {/* Group Chat Modal - Search Based */}
       <Modal
-        isOpen={isGroupModalOpen}
-        onClose={() => {
-          setIsGroupModalOpen(false);
-          setGroupName('');
-          setSelectedUsers([]);
-        }}
-        title="Create Group Chat"
-        size="lg"
+        isOpen={showGroupModal}
+        onClose={closeGroupModal}
+        title="Create Group"
       >
         <div className="space-y-4">
           <Input
-            placeholder="Group name"
+            label="Group Name"
             value={groupName}
             onChange={(e) => setGroupName(e.target.value)}
+            placeholder="Enter group name"
           />
-          
-          <div>
-            <p className="text-sm text-frost-300 mb-2">
-              Select members ({selectedUsers.length} selected)
-            </p>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {users.map(u => (
-                <div
+
+          {/* Selected Users */}
+          {selectedUsers.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedUsers.map(u => (
+                <span
                   key={u._id}
-                  onClick={() => toggleUserSelection(u._id)}
-                  className={`
-                    flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors
-                    ${selectedUsers.includes(u._id) 
-                      ? 'bg-frost-500/20 border border-frost-500/50' 
-                      : 'hover:bg-white/5'}
-                  `}
+                  className="flex items-center gap-1 px-2 py-1 bg-frost-400/20 
+                           rounded-full text-sm text-frost-300"
                 >
-                  <Avatar 
-                    src={u.avatar?.url} 
-                    alt={u.displayName}
-                    size="sm"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{u.displayName}</p>
-                    <p className="text-xs text-frost-400 truncate">@{u.username}</p>
-                  </div>
-                  {selectedUsers.includes(u._id) && (
-                    <div className="w-5 h-5 rounded-full bg-frost-500 flex items-center justify-center">
-                      <span className="text-xs">✓</span>
-                    </div>
-                  )}
-                </div>
+                  {u.name}
+                  <button
+                    onClick={() => handleRemoveUser(u._id)}
+                    className="hover:text-white"
+                  >
+                    <FiX className="w-3 h-3" />
+                  </button>
+                </span>
               ))}
             </div>
+          )}
+
+          {/* Search for group members */}
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={groupSearchQuery}
+              onChange={(e) => setGroupSearchQuery(e.target.value)}
+              placeholder="Search users to add..."
+              className="w-full pl-10 pr-4 py-3 bg-dark-700/50 border border-white/10 
+                       rounded-lg text-white placeholder-gray-400 focus:outline-none 
+                       focus:border-frost-400/50 transition-colors"
+            />
           </div>
 
-          <Button
-            onClick={handleCreateGroup}
-            isLoading={isCreating}
-            className="w-full"
-          >
-            Create Group
+          <div className="max-h-40 overflow-y-auto space-y-2">
+            {isGroupSearching ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="w-6 h-6 border-2 border-frost-400 border-t-transparent 
+                              rounded-full animate-spin" />
+              </div>
+            ) : groupSearchQuery.trim() === '' ? (
+              <p className="text-center text-gray-400 py-4 text-sm">
+                Search for users to add
+              </p>
+            ) : groupSearchResults.length === 0 ? (
+              <p className="text-center text-gray-400 py-4 text-sm">
+                No users found
+              </p>
+            ) : (
+              groupSearchResults.map(u => (
+                <button
+                  key={u._id}
+                  onClick={() => handleSelectUser(u)}
+                  className="w-full flex items-center gap-3 p-2 rounded-lg 
+                           hover:bg-frost-400/10 transition-colors"
+                >
+                  <Avatar src={u.avatar} name={u.name} size="sm" />
+                  <div className="text-left">
+                    <p className="text-white text-sm">{u.name}</p>
+                    <p className="text-gray-400 text-xs">@{u.username}</p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+
+          <Button onClick={handleCreateGroup} className="w-full">
+            Create Group ({selectedUsers.length} members)
           </Button>
         </div>
       </Modal>
-    </>
+    </div>
   );
 };
 
